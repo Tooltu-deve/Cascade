@@ -155,7 +155,58 @@ class State:
             if not cascade:
                 continue
 
-            # Find the deepest card in a valid tableau run (scan from top down)
+            # The TOP card (always index len-1) can ALWAYS be moved
+            # to foundation, free cell, or another cascade.
+            top_index = len(cascade) - 1
+            top_card = cascade[top_index]
+
+            # 2a. Top card → foundation (always allowed if legal)
+            suit_idx = _foundation_index_for_card(top_card)
+            pile = self.foundations[suit_idx]
+            if self._can_place_on_foundation(top_card, pile):
+                nxt = self.clone()
+                nxt.cascades[col] = cascade[:-1]
+                nxt.foundations[suit_idx] = pile + [top_card]
+                raw.append((
+                    MoveStep(
+                        from_sel=Selection(kind="cascade", col=col, from_index=top_index),
+                        to_target=MoveTarget(kind="foundation", suit_index=suit_idx),
+                    ),
+                    nxt,
+                ))
+
+            # 2b. Top card → free cell (if empty)
+            for slot in range(4):
+                if self.free_cells[slot] is None:
+                    nxt = self.clone()
+                    nxt.cascades[col] = cascade[:-1]
+                    nxt.free_cells[slot] = top_card
+                    raw.append((
+                        MoveStep(
+                            from_sel=Selection(kind="cascade", col=col, from_index=top_index),
+                            to_target=MoveTarget(kind="freecell", slot=slot),
+                        ),
+                        nxt,
+                    ))
+
+            # 2c. Top card → another cascade
+            for dest_col in range(8):
+                if dest_col == col:
+                    continue
+                if self._can_place_on_tableau(top_card, self.cascades[dest_col]):
+                    nxt = self.clone()
+                    nxt.cascades[col] = cascade[:-1]
+                    nxt.cascades[dest_col] = self.cascades[dest_col] + [top_card]
+                    raw.append((
+                        MoveStep(
+                            from_sel=Selection(kind="cascade", col=col, from_index=top_index),
+                            to_target=MoveTarget(kind="cascade", col=dest_col),
+                        ),
+                        nxt,
+                    ))
+
+            # 2d. Tableau runs (from deeper in the column) → empty cascade
+            # Find the deepest start of a valid tableau run
             run_start = len(cascade) - 1
             while run_start > 0:
                 run = cascade[run_start:]
@@ -163,45 +214,32 @@ class State:
                     break
                 run_start -= 1
 
-            # Generate moves for each valid run starting position
-            for start in range(run_start, len(cascade)):
+            max_seq = self._max_sequence_movable()
+
+            # Moves from tableau runs (start < top_index only, top moves already handled)
+            for start in range(run_start, top_index):
                 cards_to_move = cascade[start:]
                 bottom_card = cards_to_move[0]
                 run_len = len(cards_to_move)
-                max_seq = self._max_sequence_movable()
 
-                # Single card: to free cell (if empty)
-                if run_len == 1:
-                    for slot in range(4):
-                        if self.free_cells[slot] is None:
+                # Tableau run → empty cascade
+                if run_len <= max_seq:
+                    for dest_col in range(8):
+                        if dest_col == col:
+                            continue
+                        if not self.cascades[dest_col]:
                             nxt = self.clone()
                             nxt.cascades[col] = cascade[:start]
-                            nxt.free_cells[slot] = bottom_card
+                            nxt.cascades[dest_col] = cascade[start:]
                             raw.append((
                                 MoveStep(
                                     from_sel=Selection(kind="cascade", col=col, from_index=start),
-                                    to_target=MoveTarget(kind="freecell", slot=slot),
+                                    to_target=MoveTarget(kind="cascade", col=dest_col),
                                 ),
                                 nxt,
                             ))
 
-                # Single card: to foundation
-                if run_len == 1:
-                    suit_idx = _foundation_index_for_card(bottom_card)
-                    pile = self.foundations[suit_idx]
-                    if self._can_place_on_foundation(bottom_card, pile):
-                        nxt = self.clone()
-                        nxt.cascades[col] = cascade[:start]
-                        nxt.foundations[suit_idx] = pile + [bottom_card]
-                        raw.append((
-                            MoveStep(
-                                from_sel=Selection(kind="cascade", col=col, from_index=start),
-                                to_target=MoveTarget(kind="foundation", suit_index=suit_idx),
-                            ),
-                            nxt,
-                        ))
-
-                # Any valid run → cascade (empty or valid tableau)
+                # Tableau run → valid tableau (cascades[dst])
                 if run_len <= max_seq:
                     for dest_col in range(8):
                         if dest_col == col:
