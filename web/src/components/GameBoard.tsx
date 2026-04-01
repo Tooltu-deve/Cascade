@@ -1,9 +1,10 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import type { DragEvent } from 'react'
 import type { GameState, Selection } from '../game/types'
 import {
   SUITS,
   applyMove,
+  foundationIndexForCard,
   cloneState,
   dealInitialState,
   isValidTableauRun,
@@ -11,45 +12,99 @@ import {
   maxSequenceMovable,
   type MoveTarget,
 } from '../game/freecell'
+import { postSolve } from '../api/solveClient'
+import { applyMoveSequence } from '../api/applyMoveSequence'
+import type { SearchMetricsJson, SolverMethod } from '../api/contract'
 import { CardFace } from './CardFace'
+
+const SOLVER_STEP_DELAY_MS = 180
+const CARD_MOVE_ANIM_MS = 220
 
 function randomSeed(): number {
   return Math.floor(Math.random() * 0x7fffffff)
 }
 
 export function GameBoard() {
-  const [seed, setSeed] = useState(() => randomSeed())
-  const [game, setGame] = useState<GameState>(() => dealInitialState(seed))
+  const boardRef = useRef<HTMLDivElement | null>(null)
+  const [game, setGame] = useState<GameState>(() => dealInitialState(randomSeed()))
   const [initialDeal, setInitialDeal] = useState<GameState>(() =>
-    cloneState(dealInitialState(seed)),
+    cloneState(game),
   )
   const [undoStack, setUndoStack] = useState<GameState[]>([])
   const [draggingKey, setDraggingKey] = useState<string | null>(null)
+  const [solvingMethod, setSolvingMethod] = useState<SolverMethod | null>(null)
+  const [solverError, setSolverError] = useState<string | null>(null)
+  const [solverMetrics, setSolverMetrics] = useState<SearchMetricsJson | null>(null)
 
   const won = useMemo(() => isWin(game), [game])
+  const isSolving = solvingMethod !== null
 
-  const startNewGame = useCallback(() => {
-    const s = randomSeed()
-    setSeed(s)
-    const next = dealInitialState(s)
+  const setGameWithAnimation = useCallback(async (next: GameState) => {
+    const root = boardRef.current
+    if (!root) {
+      setGame(next)
+      return
+    }
+
+    const before = new Map<string, DOMRect>()
+    root.querySelectorAll<HTMLElement>('.card-face[data-card-id]').forEach((el) => {
+      const id = el.dataset.cardId
+      if (id) before.set(id, el.getBoundingClientRect())
+    })
+
     setGame(next)
-    setInitialDeal(cloneState(next))
-    setUndoStack([])
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+
+    root.querySelectorAll<HTMLElement>('.card-face[data-card-id]').forEach((el) => {
+      const id = el.dataset.cardId
+      if (!id) return
+      const prev = before.get(id)
+      if (!prev) return
+      const now = el.getBoundingClientRect()
+      const dx = prev.left - now.left
+      const dy = prev.top - now.top
+      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return
+      el.animate(
+        [
+          { transform: `translate(${dx}px, ${dy}px)` },
+          { transform: 'translate(0, 0)' },
+        ],
+        {
+          duration: CARD_MOVE_ANIM_MS,
+          easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)',
+        },
+      )
+    })
+
+    await new Promise<void>((resolve) =>
+      window.setTimeout(resolve, CARD_MOVE_ANIM_MS),
+    )
   }, [])
 
-  const restart = useCallback(() => {
-    setGame(cloneState(initialDeal))
+  const startNewGame = useCallback(() => {
+    const next = dealInitialState(randomSeed())
+    void setGameWithAnimation(next)
+    setInitialDeal(cloneState(next))
     setUndoStack([])
-  }, [initialDeal])
+    setSolverError(null)
+    setSolverMetrics(null)
+  }, [setGameWithAnimation])
+
+  const restart = useCallback(() => {
+    void setGameWithAnimation(cloneState(initialDeal))
+    setUndoStack([])
+    setSolverError(null)
+    setSolverMetrics(null)
+  }, [initialDeal, setGameWithAnimation])
 
   const undo = useCallback(() => {
     setUndoStack((stack) => {
       if (stack.length === 0) return stack
       const prevState = stack[stack.length - 1]
-      setGame(prevState)
+      void setGameWithAnimation(prevState)
       return stack.slice(0, -1)
     })
-  }, [])
+  }, [setGameWithAnimation])
 
   const pushUndo = useCallback((prev: GameState) => {
     setUndoStack((s) => [...s, cloneState(prev)])
@@ -61,12 +116,12 @@ export function GameBoard() {
       const next = applyMove(game, sel, target)
       if (next) {
         pushUndo(prev)
-        setGame(next)
+        void setGameWithAnimation(next)
         return true
       }
       return false
     },
-    [game, pushUndo],
+    [game, pushUndo, setGameWithAnimation],
   )
 
   const parseSelection = useCallback((e: DragEvent) => {
@@ -112,6 +167,60 @@ export function GameBoard() {
     [parseSelection, tryApply],
   )
 
+  const autoMoveToFoundation = useCallback(
+    (sel: Selection) => {
+      const card =
+        sel.kind === 'freecell'
+          ? game.freeCells[sel.slot]
+          : game.cascades[sel.col][game.cascades[sel.col].length - 1] ?? null
+      if (!card) return
+      void tryApply(sel, {
+        kind: 'foundation',
+        suitIndex: foundationIndexForCard(card),
+      })
+    },
+    [game, tryApply],
+  )
+
+  const runSolver = useCallback(
+    async (method: SolverMethod) => {
+      if (isSolving) return
+      setSolvingMethod(method)
+      setSolverError(null)
+      setSolverMetrics(null)
+      const snapshot = cloneState(game)
+
+      try {
+        const result = await postSolve(method, snapshot)
+        setSolverMetrics(result.metrics ?? null)
+
+        if (!result.ok) {
+          setSolverError(result.error ?? 'Solver failed')
+          return
+        }
+
+        const moves = result.moves ?? []
+        // Validate full sequence first, then animate applying each step.
+        applyMoveSequence(snapshot, moves)
+        pushUndo(snapshot)
+        let current = snapshot
+        for (const move of moves) {
+          const next = applyMoveSequence(current, [move])
+          current = next
+          await setGameWithAnimation(next)
+          await new Promise((resolve) =>
+            window.setTimeout(resolve, SOLVER_STEP_DELAY_MS),
+          )
+        }
+      } catch (e) {
+        setSolverError(e instanceof Error ? e.message : 'Cannot reach solver API')
+      } finally {
+        setSolvingMethod(null)
+      }
+    },
+    [game, isSolving, pushUndo, setGameWithAnimation],
+  )
+
   const canDragCascade = (col: number, fromIndex: number) => {
     const run = game.cascades[col].slice(fromIndex)
     return run.length > 0 && isValidTableauRun(run)
@@ -120,11 +229,14 @@ export function GameBoard() {
   const maxMove = maxSequenceMovable(game)
 
   return (
-    <div className={`game-board${draggingKey ? ' is-dragging' : ''}`}>
+    <div
+      ref={boardRef}
+      className={`game-board${draggingKey ? ' is-dragging' : ''}`}
+    >
       <header className="game-toolbar">
         <div className="brand">
           <h1>FreeCell</h1>
-          <p className="tagline">Local play · Solvers coming soon</p>
+          <p className="tagline">Local play + Python solver API</p>
         </div>
         <div className="toolbar-actions">
           <button type="button" className="btn primary" onClick={startNewGame}>
@@ -144,20 +256,52 @@ export function GameBoard() {
         </div>
         <div className="solver-placeholder" aria-label="Solver actions">
           <span className="solver-label">Solvers</span>
-          <button type="button" className="btn ghost" disabled title="Python API later">
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => void runSolver('bfs')}
+            disabled={isSolving}
+          >
             BFS
           </button>
-          <button type="button" className="btn ghost" disabled title="Python API later">
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => void runSolver('dfs')}
+            disabled={isSolving}
+          >
             DFS
           </button>
-          <button type="button" className="btn ghost" disabled title="Python API later">
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => void runSolver('ucs')}
+            disabled={isSolving}
+          >
             UCS
           </button>
-          <button type="button" className="btn ghost" disabled title="Python API later">
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => void runSolver('astar')}
+            disabled={isSolving}
+          >
             A*
           </button>
         </div>
       </header>
+
+      {isSolving ? (
+        <div className="solver-status" role="status">
+          Solving with <strong>{solvingMethod?.toUpperCase()}</strong>...
+        </div>
+      ) : null}
+
+      {solverError ? (
+        <div className="solver-error" role="alert">
+          Solver error: {solverError}
+        </div>
+      ) : null}
 
       {won ? (
         <div className="win-banner" role="status">
@@ -169,7 +313,15 @@ export function GameBoard() {
         <span>
           Max run move: <strong>{maxMove}</strong>
         </span>
-        <span className="muted">Seed: {seed}</span>
+        {solverMetrics ? (
+          <>
+            <span className="muted">
+              Time: {Math.round(solverMetrics.searchTimeMs)} ms
+            </span>
+            <span className="muted">Nodes: {solverMetrics.expandedNodes}</span>
+            <span className="muted">Moves: {solverMetrics.solutionLength}</span>
+          </>
+        ) : null}
       </div>
 
       <div className="top-row">
@@ -180,13 +332,14 @@ export function GameBoard() {
                 key={`fc-${i}`}
                 className={`cell slot filled${draggingKey === `fc-${i}` ? ' drag-source' : ''}`}
                 draggable
+                onClick={() => autoMoveToFoundation({ kind: 'freecell', slot: i })}
                 onDragStart={(e) =>
                   onDragStart(e, { kind: 'freecell', slot: i }, `fc-${i}`)
                 }
                 onDragEnd={onDragEnd}
                 aria-label={`Free cell ${i + 1}, drag to move`}
               >
-                <CardFace card={card} />
+                <CardFace card={card} cardId={`${card.suit}-${card.rank}`} />
               </div>
             ) : (
               <div
@@ -214,18 +367,8 @@ export function GameBoard() {
                 aria-label={`Foundation ${suit}, drop matching suit`}
               >
                 {top ? (
-                  <CardFace card={top} />
-                ) : (
-                  <span className={`foundation-suit hint ${suit}`}>
-                    {suit === 'spades'
-                      ? '♠'
-                      : suit === 'hearts'
-                        ? '♥'
-                        : suit === 'diamonds'
-                          ? '♦'
-                          : '♣'}
-                  </span>
-                )}
+                  <CardFace card={top} cardId={`${top.suit}-${top.rank}`} />
+                ) : null}
               </div>
             )
           })}
@@ -247,12 +390,17 @@ export function GameBoard() {
               column.map((card, idx) => {
                 const dragKey = `c-${col}-${idx}`
                 const canDrag = canDragCascade(col, idx)
+                const isTop = idx === column.length - 1
                 return (
                   <div
                     key={`${col}-${idx}-${card.suit}-${card.rank}`}
                     className={`cascade-card${draggingKey === dragKey ? ' drag-source' : ''}`}
                     style={{ zIndex: idx + 1 }}
                     draggable={canDrag}
+                    onClick={() => {
+                      if (!isTop) return
+                      autoMoveToFoundation({ kind: 'cascade', col, fromIndex: idx })
+                    }}
                     onDragStart={(e) => {
                       if (!canDrag) {
                         e.preventDefault()
@@ -269,7 +417,7 @@ export function GameBoard() {
                     onDrop={(e) => onDrop(e, { kind: 'cascade', col })}
                     aria-label={`Column ${col + 1}, drag from rank ${card.rank}`}
                   >
-                    <CardFace card={card} />
+                    <CardFace card={card} cardId={`${card.suit}-${card.rank}`} />
                   </div>
                 )
               })

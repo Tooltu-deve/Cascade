@@ -114,6 +114,26 @@
   margin-bottom: 0.75rem;
 }
 
+.solver-status,
+.solver-error {
+  padding: 0.55rem 0.8rem;
+  border-radius: 8px;
+  margin-bottom: 0.6rem;
+  font-size: 0.85rem;
+}
+
+.solver-status {
+  border: 1px solid rgba(90, 180, 120, 0.4);
+  background: rgba(90, 180, 120, 0.14);
+  color: var(--text-h);
+}
+
+.solver-error {
+  border: 1px solid rgba(196, 92, 92, 0.5);
+  background: rgba(196, 92, 92, 0.16);
+  color: #ffcccc;
+}
+
 .top-row {
   display: flex;
   flex-wrap: wrap;

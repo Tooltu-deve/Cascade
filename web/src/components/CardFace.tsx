@@ -24,6 +24,7 @@ type Props = {
   faceUp?: boolean
   selected?: boolean
   className?: string
+  cardId?: string
 }
 
 export function CardFace({
@@ -31,12 +32,14 @@ export function CardFace({
   faceUp = true,
   selected = false,
   className = '',
+  cardId,
 }: Props) {
   const red = isRed(card.suit)
   return (
     <div
       className={`card-face ${faceUp ? 'face-up' : 'face-down'} ${selected ? 'selected' : ''} ${className}`.trim()}
       data-suit={card.suit}
+      data-card-id={cardId}
     >
       {faceUp ? (
         <>

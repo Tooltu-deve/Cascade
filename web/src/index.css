@@ -11,9 +11,9 @@
   --font-display: 'Fraunces', Georgia, serif;
   --font-body: 'DM Sans', system-ui, sans-serif;
 
-  --card-w: 72px;
-  --card-h: 100px;
-  --card-overlap: 72px;
+  --card-w: 100px;
+  --card-h: 130px;
+  --card-overlap: 100px;
 
   font-family: var(--font-body);
   font-size: 16px;
