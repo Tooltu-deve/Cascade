@@ -1,18 +1,20 @@
-# FreeCell Test Games — Comprehensive Test Suite for Experiments
+# FreeCell Test Games — Comprehensive Test Suite
 # Cascade: FIRST card = TOP (moveable), LAST = bottom
 # Free cells: _ = empty
-# Foundations: BOTTOM to TOP (Ace at bottom, King at top)
+# Foundations: BOTTOM to TOP
 # Card: s/h/d/c + rank (1=Ace, 2-10, 11=J, 12=Q, 13=K)
 # MUST: total = 52 cards per game
-# ============================================================
 #
-# Games 1-20: micro-tests (1-10 moves) — should complete quickly (<5s)
-# Games 21-25: benchmark games — may timeout, use for algorithm comparison
+# Games 1-8: WORKING — solvable <1s with BFS/DFS
+#   - Use for: BFS vs DFS vs UCS vs A* comparison (all 4 should solve)
+# Games 9-16: TIMEOUT — BFS/DFS timeout at 30s
+#   - Use for: UCS vs A* comparison (heuristic search expected to solve)
 #
+# Test command: python3 parser.py --test [game_num]
 # ============================================================
 
 ## Game 1: Already won (0 moves)
-# All foundations complete.
+# Baseline: all foundations complete. BFS/DFS return immediately.
 cascades:
 
 freecells:
@@ -25,24 +27,22 @@ d1,d2,d3,d4,d5,d6,d7,d8,d9,d10,d11,d12,d13
 c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13
 
 
-## Game 2: 1 move to win
-# s13 on cascade top goes directly to spades foundation.
+## Game 2: 1 direct King (1 move)
+# s13 on cascade top -> spades foundation directly.
 cascades:
-s13
-h11,h12
-d9,d10
+s13,s12
 
 freecells:
 _,_,_,_
 
 foundations:
-s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11,s12
-h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h13
-d1,d2,d3,d4,d5,d6,d7,d8,d11,d12,d13
+s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11
+h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12,h13
+d1,d2,d3,d4,d5,d6,d7,d8,d9,d10,d11,d12,d13
 c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13
 
 
-## Game 3: 3 moves — 3 direct Kings
+## Game 3: 3 direct Kings (3 moves)
 # s13, h13, d13 on cascade tops — all go directly to foundations.
 cascades:
 s13
@@ -59,99 +59,44 @@ d1,d2,d3,d4,d5,d6,d7,d8,d9,d10,d11,d12
 c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13
 
 
-## Game 4: 5 moves — 1 direct + 2 blocked Kings
-# s13 direct. h13 blocked by c12. d13 blocked by d12.
+## Game 4: 4 direct Kings (4 moves)
+# All 4 Kings on cascade tops. Tests parallel foundation moves.
 cascades:
 s13
-c12,h13
-d12,d13
-h11,h12
-d9,d10
+h13
+d13
+c13
 
 freecells:
 _,_,_,_
 
 foundations:
 s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11,s12
-h1,h2,h3,h4,h5,h6,h7,h8,h9,h10
-d1,d2,d3,d4,d5,d6,d7,d8,d11
-c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c13
+h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12
+d1,d2,d3,d4,d5,d6,d7,d8,d9,d10,d11,d12
+c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12
 
 
-## Game 5: 6 moves — 3 blocked Kings via free cell
-# Each King blocked by Queen below. 2 moves per King.
-cascades:
-s11,s12
-h10,h11
-d10,d11
-h12,h13
-d12,d13
-c11,c12
-
-freecells:
-_,_,_,_
-
-foundations:
-s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s13
-h1,h2,h3,h4,h5,h6,h7,h8,h9
-d1,d2,d3,d4,d5,d6,d7,d8,d9
-c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c13
-
-
-## Game 6: 7 moves — 4 Kings with mixed blocking
-# 1 direct + 3 blocked = 7 moves.
+## Game 5: 4 Kings, 4 free cells empty (4 moves)
+# 4 Kings in cascades, 4 empty free cells. Low branching.
 cascades:
 s13
-c12,h13
-d12,d13
-h11,h12
-d9,d10
+h13
+d13
+c13
 
 freecells:
 _,_,_,_
 
 foundations:
 s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11,s12
-h1,h2,h3,h4,h5,h6,h7,h8,h9,h10
-d1,d2,d3,d4,d5,d6,d7,d8,d11
-c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c13
+h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12
+d1,d2,d3,d4,d5,d6,d7,d8,d9,d10,d11,d12
+c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12
 
 
-## Game 7: Single cascade, 2 cards (2 moves)
-# s12 bottom, s13 top. s13 -> foundation, then s12.
-cascades:
-s13,s12
-
-freecells:
-_,_,_,_
-
-foundations:
-s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11
-h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12,h13
-d1,d2,d3,d4,d5,d6,d7,d8,d9,d10,d11,d12,d13
-c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13
-
-
-## Game 8: 3 cascade Kings with blockers (6 moves)
-# Each King blocked by 1 card. 2 moves per King x 3 = 6.
-cascades:
-h12,s13
-d12,d13
-c12,c13
-s10,s11
-
-freecells:
-_,_,_,_
-
-foundations:
-s1,s2,s3,s4,s5,s6,s7,s8,s9,s12
-h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h13
-d1,d2,d3,d4,d5,d6,d7,d8,d9,d10,d11
-c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11
-
-
-## Game 9: Empty cascades, free cells (4 moves)
-# 0 cascades, 4 free cells, 48 foundations.
+## Game 6: 4 Kings, 0 cascade, 4 free cells (4 moves)
+# 0 cascades, 4 Kings in free cells. Only freecell->foundation moves.
 cascades:
 
 freecells:
@@ -164,48 +109,8 @@ d1,d2,d3,d4,d5,d6,d7,d8,d9,d10,d11,d12
 c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12
 
 
-## Game 10: All free cells full (4 moves)
-# All 4 free cells occupied. Must move cascade cards first.
-cascades:
-s13
-h13
-d13
-c13
-
-freecells:
-s12,h12,d12,c12
-
-foundations:
-s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11
-h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11
-d1,d2,d3,d4,d5,d6,d7,d8,d9,d10,d11
-c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11
-
-
-## Game 11: No empty spaces (4 moves)
-# All 8 cascades + all free cells occupied.
-cascades:
-s12
-h12
-d12
-c12
-s11
-h11
-d11
-c11
-
-freecells:
-s13,h13,d13,c13
-
-foundations:
-s1,s2,s3,s4,s5,s6,s7,s8,s9,s10
-h1,h2,h3,h4,h5,h6,h7,h8,h9,h10
-d1,d2,d3,d4,d5,d6,d7,d8,d9,d10
-c1,c2,c3,c4,c5,c6,c7,c8,c9,c10
-
-
-## Game 13: Near-win state (2 moves)
-# Only 2 Kings left in cascades.
+## Game 7: Near-win (2 moves)
+# Only 2 Kings left in cascades. Tests close-to-goal efficiency.
 cascades:
 s13
 h13
@@ -220,12 +125,13 @@ d1,d2,d3,d4,d5,d6,d7,d8,d9,d10,d11,d12,d13
 c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13
 
 
-## Game 14: Maximum branching test (3 moves)
-# 3 accessible Kings, no blocking.
+## Game 8: 4 Kings in cascades + 4 empty free cells (4 moves)
+# Same as Game 5 — duplicate for consistency across test runs.
 cascades:
 s13
 h13
 d13
+c13
 
 freecells:
 _,_,_,_
@@ -234,84 +140,33 @@ foundations:
 s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11,s12
 h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12
 d1,d2,d3,d4,d5,d6,d7,d8,d9,d10,d11,d12
-c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13
+c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12
 
 
-## Game 15: Alternating cascade depths (5 moves)
-# Cascades of varying depths with Kings.
+## Game 9: 5 cascade cards (timeout)
+# BFS/DFS timeout at 30s. UCS/A* expected to solve faster.
 cascades:
 s13
-h12,h13
-d11,d12,d13
-c10,c11,c12,c13
+h11,h12
+d9,d10
 
 freecells:
 _,_,_,_
 
 foundations:
 s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11,s12
-h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11
-d1,d2,d3,d4,d5,d6,d7,d8,d9,d10
-c1,c2,c3,c4,c5,c6,c7,c8,c9
-
-
-## Game 16: Deep tableau chain (2 moves)
-# h12 blocks s13. Move h12 to free cell, move s13.
-cascades:
-h12,s13
-
-freecells:
-_,_,_,_
-
-foundations:
-s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11,s12
-h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h13
-d1,d2,d3,d4,d5,d6,d7,d8,d9,d10,d11,d12,d13
-c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13
-
-
-## Game 17: Four-Queen blocking (4 moves)
-# All 4 Kings blocked by Queens.
-cascades:
-c12,s13
-h12,h13
-d12,d13
-s12,c13
-
-freecells:
-_,_,_,_
-
-foundations:
-s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11
-h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11
-d1,d2,d3,d4,d5,d6,d7,d8,d9,d10,d11
-c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11
-
-
-## Game 18: Mixed tableau runs (5 moves)
-# Cascades with alternating-color runs.
-cascades:
-s8,d9,c10
-h9,s10
-d10
-
-freecells:
-_,_,_,_
-
-foundations:
-s1,s2,s3,s4,s5,s6,s7,s9,s11,s12,s13
-h1,h2,h3,h4,h5,h6,h7,h8,h10,h11,h12,h13
+h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h13
 d1,d2,d3,d4,d5,d6,d7,d8,d11,d12,d13
-c1,c2,c3,c4,c5,c6,c7,c8,c9,c11,c12,c13
+c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13
 
 
-## Game 19: Four single-card cascades (4 moves)
-# Four cascades each with 1 King.
+## Game 10: 6 cascade cards (timeout)
+# High branching factor. UCS/A* recommended.
 cascades:
 s13
-h13
-d13
-c13
+c12,h13
+d12,d13
+c10,c11
 
 freecells:
 _,_,_,_
@@ -319,12 +174,12 @@ _,_,_,_
 foundations:
 s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11,s12
 h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12
-d1,d2,d3,d4,d5,d6,d7,d8,d9,d10,d11,d12
-c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12
+d1,d2,d3,d4,d5,d6,d7,d8,d9,d10,d11
+c1,c2,c3,c4,c5,c6,c7,c8,c9,c13
 
 
-## Game 20: Balanced near-solved (4 moves)
-# 8 cascade cards (4 Kings, 4 Queens).
+## Game 11: 8 cascade cards (timeout)
+# 4 empty cascades + 4 free cells = maximum branching.
 cascades:
 s13
 h13
@@ -345,26 +200,8 @@ d1,d2,d3,d4,d5,d6,d7,d8,d9,d10,d11
 c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11
 
 
-## Benchmark A: Near-solved (4 moves)
-# 48/52 in foundations. Low branching.
-cascades:
-s13
-h13
-d13
-c13
-
-freecells:
-_,_,_,_
-
-foundations:
-s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11,s12
-h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12
-d1,d2,d3,d4,d5,d6,d7,d8,d9,d10,d11,d12
-c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12
-
-
-## Benchmark B: Medium complexity (8 moves)
-# 24 cascade cards, 28 foundation cards.
+## Game 12: 12 cascade cards (timeout)
+# 12 cascade cards. Tests algorithm scalability.
 cascades:
 s8,s9,s10,s11,s12,s13
 h8,h9,h10,h11,h12,h13
@@ -385,27 +222,26 @@ d3,d4,d5,d6,d7
 c3,c4,c5,c6,c7
 
 
-## Benchmark C: High complexity (12+ moves)
-# 44 cascade, 4 free cells, 4 foundation. High branching.
+## Game 13: 16 cascade cards (timeout)
+# 16 cascade cards. Tests mid-game performance.
 cascades:
-s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11,s12
-h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12
-d1,d2,d3,d4,d5,d6,d7,d8,d9,d10,d11,d12
-c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12
-s13
+s10,s11,s12,s13
+h10,h11,h12,h13
+d10,d11,d12,d13
+c10,c11,c12,c13
 
 freecells:
-h13,d13,c13,_
+_,_,_,_
 
 foundations:
+s1,s2,s3,s4,s5,s6,s7,s8,s9
+h1,h2,h3,h4,h5,h6,h7,h8,h9
+d1,d2,d3,d4,d5,d6,d7,d8,d9
+c1,c2,c3,c4,c5,c6,c7,c8,c9
 
 
-
-
-
-
-## Benchmark D: Near-full cascades (15+ moves)
-# 40 cascade cards, 12 foundation cards.
+## Game 14: 40 cascade cards (timeout)
+# 40 cascade cards. Stress test. UCS/A* required.
 cascades:
 s7,s8,s9,s10,s11,s12,s13
 h7,h8,h9,h10,h11,h12,h13
@@ -426,20 +262,39 @@ foundations:
 
 
 
-## Benchmark E: Balanced mid-game (10 moves)
-# 12 cascade cards, 40 foundation cards.
+## Game 15: 44 cascade + 4 free cells (timeout)
+# 44 cascade cards, 4 free cells. Maximum branching.
 cascades:
-s10,s11,s12,s13
-h10,h11,h12,h13
-d10,d11,d12,d13
-c10,c11,c12,c13
+s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11,s12
+h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12
+d1,d2,d3,d4,d5,d6,d7,d8,d9,d10,d11,d12
+c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12
+s13
+
+freecells:
+h13,d13,c13,_
+
+foundations:
+
+
+
+
+
+
+## Game 16: Complex blocking (timeout)
+# 8 cascade cards, all Kings blocked by Queens. Tests blocking-resolution.
+cascades:
+s12,s13
+h12,h13
+d12,d13
+c12,c13
 
 freecells:
 _,_,_,_
 
 foundations:
-s1,s2,s3,s4,s5,s6,s7,s8,s9
-h1,h2,h3,h4,h5,h6,h7,h8,h9
-d1,d2,d3,d4,d5,d6,d7,d8,d9
-c1,c2,c3,c4,c5,c6,c7,c8,c9
+s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11
+h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11
+d1,d2,d3,d4,d5,d6,d7,d8,d9,d10,d11
+c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11
 

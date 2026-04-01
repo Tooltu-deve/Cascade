@@ -136,13 +136,18 @@ def parse_games(filepath: str):
     return games
 
 
-def test_game(payload: dict, name: str):
-    """Test a game with BFS and DFS."""
+def test_game(payload: dict, name: str, time_limit: float = 30.0,
+              solvers=None):
+    """Test a game with BFS, DFS, and UCS (or custom solver list)."""
     sys.path.insert(0, os.path.dirname(__file__))
     from models import SolveRequest
     from game import State
     from solver.bfs import solve as bfs_solve
     from solver.dfs import solve as dfs_solve
+    from solver.ucs import solve as ucs_solve
+
+    if solvers is None:
+        solvers = [('BFS', bfs_solve), ('DFS', dfs_solve), ('UCS', ucs_solve)]
 
     s = State.from_pydantic(SolveRequest.model_validate(payload).state)
     total = sum(len(c) for c in s.cascades) + sum(len(f) for f in s.foundations)
@@ -156,8 +161,8 @@ def test_game(payload: dict, name: str):
         if col:
             print(f"    cascade[{i}]: {','.join(f'{c.suit[0]}{c.rank}' for c in col)}")
 
-    for label, fn in [('BFS', bfs_solve), ('DFS', dfs_solve)]:
-        r = fn(s, time_limit=30.0)
+    for label, fn in solvers:
+        r = fn(s, time_limit=time_limit)
         status = '✓' if r.ok else '✗'
         print(f"  {status} {label}: ok={r.ok}, moves={r.metrics.solution_length}, "
               f"expanded={r.metrics.expanded_nodes}, time={r.metrics.search_time_ms:.0f}ms")
@@ -170,7 +175,28 @@ def main():
     filepath = os.path.join(script_dir, 'games.txt')
 
     args = sys.argv[1:]
+
+    # Parse --test and --solvers flags
     do_test = '--test' in args
+    time_limit = 30.0
+    selected_solvers = None
+
+    # --solvers=bfs,dfs,ucs or --solvers=all
+    for a in args:
+        if a.startswith('--solvers='):
+            val = a.split('=', 1)[1]
+            sys.path.insert(0, script_dir)
+            from solver.bfs import solve as bfs_solve
+            from solver.dfs import solve as dfs_solve
+            from solver.ucs import solve as ucs_solve
+            if val == 'all':
+                selected_solvers = [('BFS', bfs_solve), ('DFS', dfs_solve), ('UCS', ucs_solve)]
+            else:
+                parts = val.split(',')
+                name_map = {'bfs': ('BFS', bfs_solve), 'dfs': ('DFS', dfs_solve), 'ucs': ('UCS', ucs_solve)}
+                selected_solvers = [name_map[p.strip().lower()] for p in parts if p.strip().lower() in name_map]
+
+    args = [a for a in args if not a.startswith('--solvers=')]
     args = [a for a in args if a != '--test']
 
     games = parse_games(filepath)
@@ -183,7 +209,7 @@ def main():
             print(f"{'='*60}")
             print(json.dumps(payload, indent=2))
             if do_test:
-                test_game(payload, f"Game {i}: {name}")
+                test_game(payload, f"Game {i}: {name}", solvers=selected_solvers, time_limit=time_limit)
     else:
         indices = [int(a) - 1 for a in args]
         for idx in indices:
@@ -191,7 +217,7 @@ def main():
                 name, payload = games[idx]
                 print(json.dumps(payload, indent=2))
                 if do_test:
-                    test_game(payload, name)
+                    test_game(payload, name, solvers=selected_solvers, time_limit=time_limit)
             else:
                 print(f"Game {idx+1} not found. Available: 1-{len(games)}", file=sys.stderr)
 
