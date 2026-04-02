@@ -1,19 +1,22 @@
-## Game 14: 40 cascade cards (timeout)
-# 40 cascade cards. Stress test. UCS/A* required.
+## Game 17: A*
 cascades:
-s7,s8,s9,s10,s11,s12,s13
-h7,h8,h9,h10,h11,h12,h13
-d7,d8,d9,d10,d11,d12,d13
-c7,c8,c9,c10,c11,c12,c13
-s1,s2,s3,s4,s5,s6
-h1,h2,h3,h4,h5,h6
-d1,d2,d3,d4,d5,d6
-c1,c2,c3,c4,c5,c6
+c11,s12,h9,d13
+c9,s10,h12,s7
+d11,c10,s13,h7
+h10,d9,c13,d7
+s9,h13,d10,d6
+s11,c12,h11,c6
+d12,s8,c8
+h8,d8,c7
 
 freecells:
 _,_,_,_
 
 foundations:
+s1,s2,s3,s4,s5,s6
+h1,h2,h3,h4,h5,h6
+d1,d2,d3,d4,d5
+c1,c2,c3,c4,c5
 
 
 

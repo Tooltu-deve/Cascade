@@ -204,7 +204,7 @@ def main():
                 parts = val.split(',')
                 name_map = {
                     'bfs': ('BFS', bfs_solve), 'dfs': ('DFS', dfs_solve),
-                    'ucs': ('UCS', ucs_solve), 'astar': ('A*', astar_solve),
+                    'ucs': ('UCS', ucs_solve), 'astar': ('A*', astar_solve)
                 }
                 selected_solvers = [name_map[p.strip().lower()] for p in parts if p.strip().lower() in name_map]
 
