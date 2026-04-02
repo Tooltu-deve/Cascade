@@ -1,0 +1,249 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage[vietnamese,english]{babel}
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage[hidelinks]{hyperref}
+\usepackage{geometry}
+\usepackage{tikz}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\geometry{a4paper, margin=1in, headheight=20pt}
+
+% Define colors for title page
+\definecolor{universityblue}{RGB}{0, 83, 159}
+\definecolor{titlecolor}{RGB}{0, 51, 102}
+
+% Setup header style
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\includegraphics[height=15pt]{asset/logo-hcmus-new.png} \small \textcolor{universityblue}{University of Science-VNU-HCM}}
+\fancyhead[R]{\small \textcolor{universityblue}{Introduction to Artificial Intelligence}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\begin{document}
+
+% Include title page
+\input{tittle.tex}
+
+% No header for table of contents
+\pagestyle{empty}
+\tableofcontents
+\newpage
+
+% Enable header from here
+\pagestyle{fancy}
+
+% =========================
+\section{Introduction}
+FreeCell is a solitaire card game using a standard 52-card deck. 
+In this project, we develop a FreeCell program that integrates 
+search algorithms such as BFS, DFS, UCS, and A* to solve the 
+game automatically.
+
+Project objectives:
+\begin{itemize}
+    \item Build a FreeCell game with graphical user interface.
+    \item Implement search algorithms.
+    \item Compare performance across different algorithms.
+\end{itemize}
+
+% =========================
+\section{Project Planning and Task Distribution}
+
+\subsection{Team Members}
+\begin{itemize}
+    \item Student A - MSSV
+    \item Student B - MSSV
+    \item Student C - MSSV
+\end{itemize}
+
+\subsection{Task Assignment}
+\begin{table}[H]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Member} & \textbf{Task} \\
+\midrule
+A & GUI + Game Logic \\
+B & BFS, DFS \\
+C & UCS, A* \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Contribution Percentage}
+\begin{table}[H]
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Member} & \textbf{Contribution \%} & \textbf{Notes} \\
+\midrule
+A & 30\% & GUI \\
+B & 35\% & BFS, DFS \\
+C & 35\% & UCS, A* \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% =========================
+\section{Algorithm Description}
+
+\subsection{Problem Formulation}
+
+\subsubsection{State Representation}
+A state consists of:
+\begin{itemize}
+    \item 8 cascades
+    \item 4 free cells
+    \item 4 foundations
+\end{itemize}
+
+\subsubsection{Actions}
+Valid actions include:
+\begin{itemize}
+    \item Move between cascades
+    \item Move to a free cell
+    \item Move to a foundation
+\end{itemize}
+
+\subsubsection{Goal Test}
+The goal state is achieved when all cards are moved to the foundations in order from Ace to King.
+
+\subsubsection{Cost Function}
+Each move has a cost of:
+\[
+cost = 1
+\]
+
+\subsubsection{Heuristic}
+A simple heuristic:
+\[
+h(n) = \text{number of cards not yet in foundations}
+\]
+
+\subsubsection{Avoiding Revisiting States}
+Use a \texttt{visited} set to store explored states.
+
+% =========================
+\subsection{Algorithm Details}
+
+\subsubsection{Breadth-First Search (BFS)}
+Uses a queue data structure, exploring level by level. 
+Guarantees finding the optimal solution.
+
+\subsubsection{Depth-First Search (DFS) / IDS}
+DFS uses a stack or recursion. IDS incrementally increases depth to improve upon DFS.
+
+\subsubsection{Uniform-Cost Search (UCS)}
+Uses a priority queue, selecting the node with the lowest cost.
+
+\subsubsection{A* Search}
+Formula:
+\[
+f(n) = g(n) + h(n)
+\]
+Where:
+\begin{itemize}
+    \item $g(n)$: cost from start to current node
+    \item $h(n)$: heuristic estimate
+\end{itemize}
+
+% =========================
+\section{Experiments}
+
+\subsection{Experimental Setup}
+\begin{itemize}
+    \item Language: Python
+    \item Environment: CPU, RAM
+    \item Test set: fixed deals
+\end{itemize}
+
+\subsection{Evaluation Metrics}
+\begin{itemize}
+    \item Search time
+    \item Peak memory usage
+    \item Expanded nodes
+    \item Solution length
+\end{itemize}
+
+\subsection{Results Tables}
+\begin{table}[H]
+\centering
+\begin{tabular}{lllll}
+\toprule
+Algorithm & Time & Memory & Nodes & Length \\
+\midrule
+BFS & ... & ... & ... & ... \\
+DFS & ... & ... & ... & ... \\
+UCS & ... & ... & ... & ... \\
+A* & ... & ... & ... & ... \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Charts}
+\begin{itemize}
+    \item Time comparison chart
+    \item Node expansion chart
+\end{itemize}
+
+\subsection{Discussion}
+\begin{itemize}
+    \item BFS: optimal but memory-intensive
+    \item DFS: fast but no guarantee of optimality
+    \item UCS: depends on cost function
+    \item A*: efficient if heuristic is good
+\end{itemize}
+
+% =========================
+\section{GUI and Demo Video}
+
+\subsection{GUI Description}
+Interface description:
+\begin{itemize}
+    \item Cascades, Free cells, Foundations
+    \item Control buttons
+\end{itemize}
+
+\subsection{Demo Video}
+Link video:
+\url{https://youtube.com/your-video-link}
+
+% =========================
+\section{Conclusion}
+\begin{itemize}
+    \item A* provides the best performance
+    \item Heuristic plays a crucial role
+\end{itemize}
+
+% =========================
+\section{References}
+\begin{itemize}
+    \item Wikipedia FreeCell
+    \item AI Textbooks
+    \item GitHub repositories
+\end{itemize}
+
+% =========================
+\section{Appendix}
+
+\subsection{AI Usage}
+We used AI to:
+\begin{itemize}
+    \item Explain algorithms
+    \item Debug code
+\end{itemize}
+
+\subsection{Prompts}
+\begin{itemize}
+    \item ``Explain BFS vs DFS''
+    \item ``Suggest heuristic for FreeCell''
+\end{itemize}
+
+\end{document}

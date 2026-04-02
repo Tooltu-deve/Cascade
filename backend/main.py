@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse
 
 from game import State, card_total_count, is_valid_initial_state
 from models import GameState, MoveStep, SearchMetrics, SolveRequest
-from solver import bfs_solve, dfs_solve, astar_solve
+from solver import astar_solve, bfs_solve, dfs_solve, ucs_solve
 
 # Start memory tracing at module load so peak captures the whole server startup
 tracemalloc.start()
