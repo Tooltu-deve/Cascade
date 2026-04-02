@@ -145,12 +145,15 @@ def test_game(payload: dict, name: str, time_limit: float = 30.0,
     from solver.bfs import solve as bfs_solve
     from solver.dfs import solve as dfs_solve
     from solver.ucs import solve as ucs_solve
+    from solver.a_star import solve as astar_solve
 
     if solvers is None:
-        solvers = [('BFS', bfs_solve), ('DFS', dfs_solve), ('UCS', ucs_solve)]
+        solvers = [('BFS', bfs_solve), ('DFS', dfs_solve), ('UCS', ucs_solve), ('A*', astar_solve)]
 
     s = State.from_pydantic(SolveRequest.model_validate(payload).state)
-    total = sum(len(c) for c in s.cascades) + sum(len(f) for f in s.foundations)
+    total = (sum(len(c) for c in s.cascades)
+             + sum(len(f) for f in s.foundations)
+             + sum(1 for fc in s.free_cells if fc))
 
     print(f"\n{'='*50}")
     print(f"  {name}")
@@ -189,11 +192,15 @@ def main():
             from solver.bfs import solve as bfs_solve
             from solver.dfs import solve as dfs_solve
             from solver.ucs import solve as ucs_solve
+            from solver.a_star import solve as astar_solve
             if val == 'all':
-                selected_solvers = [('BFS', bfs_solve), ('DFS', dfs_solve), ('UCS', ucs_solve)]
+                selected_solvers = [('BFS', bfs_solve), ('DFS', dfs_solve), ('UCS', ucs_solve), ('A*', astar_solve)]
             else:
                 parts = val.split(',')
-                name_map = {'bfs': ('BFS', bfs_solve), 'dfs': ('DFS', dfs_solve), 'ucs': ('UCS', ucs_solve)}
+                name_map = {
+                    'bfs': ('BFS', bfs_solve), 'dfs': ('DFS', dfs_solve),
+                    'ucs': ('UCS', ucs_solve), 'astar': ('A*', astar_solve),
+                }
                 selected_solvers = [name_map[p.strip().lower()] for p in parts if p.strip().lower() in name_map]
 
     args = [a for a in args if not a.startswith('--solvers=')]

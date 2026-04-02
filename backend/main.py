@@ -138,15 +138,27 @@ def solve_dfs(req: SolveRequest):
 
 @app.post("/solve/ucs")
 def solve_ucs(req: SolveRequest):
-    """Uniform-Cost Search solver (not yet implemented)."""
-    raise HTTPException(status_code=501, detail="UCS solver not yet implemented")
-
+    """Uniform-Cost Search solver with move-type-based cost function."""
+    state = _parse_state(req)
+    result = ucs_solve(state, time_limit=120.0)
+    return _camel_json_response(
+        ok=result.ok,
+        moves=result.moves if result.ok else None,
+        metrics=result.metrics,
+        error=result.error if not result.ok else None,
+    )
 
 @app.post("/solve/astar")
 def solve_astar(req: SolveRequest):
-    """A* Search solver (not yet implemented)."""
-    raise HTTPException(status_code=501, detail="A* solver not yet implemented")
-
+    """A* Search solver with critical path heuristic."""
+    state = _parse_state(req)
+    result = astar_solve(state, time_limit=120.0)
+    return _camel_json_response(
+        ok=result.ok,
+        moves=result.moves if result.ok else None,
+        metrics=result.metrics,
+        error=result.error if not result.ok else None,
+    )
 
 # ── entry point ──────────────────────────────────────────────────────────────
 

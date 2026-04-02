@@ -106,13 +106,32 @@ class State:
 
     # ── move generation ─────────────────────────────────────────────────────
 
-    def get_successors(self) -> list[tuple[MoveStep, State]]:
+    def get_successors(self, prune: bool = False) -> list[tuple[MoveStep, State]]:
         """
         Generate all legal atomic moves from this state.
         Each move moves exactly ONE card (or a valid tableau run).
         Deduplicates by resulting state key to avoid redundant successors.
+
+        Args:
+            prune: If True, apply pruning rules to reduce branching factor:
+                - Skip freecell→cascade if card can go to foundation
+                - Skip freecell→cascade if moving a King
+                - Skip cascade→freecell for Kings (they belong in foundation)
+                - Skip cascade→cascade if it blocks a King below
         """
         raw: list[tuple[MoveStep, State]] = []
+
+        # ── Precompute: which Kings are blocked below in each cascade ──────────
+        blocked_kings: dict[int, bool] = {}
+        if prune:
+            for col_idx, col in enumerate(self.cascades):
+                blocked_kings[col_idx] = False
+                if col:
+                    # Check if top card is King blocked by card below
+                    for pos in range(len(col) - 1):
+                        if col[pos].rank == 13:  # King is not on top
+                            blocked_kings[col_idx] = True
+                            break
 
         # 1. Moves FROM free cells
         for slot in range(4):
@@ -138,6 +157,9 @@ class State:
             # Free cell → cascade (valid tableau placement; empty cascade always valid)
             for col in range(8):
                 if self._can_place_on_tableau(card, self.cascades[col]):
+                    # PRUNE: never move King from free cell to cascade
+                    if prune and card.rank == 13:
+                        continue
                     nxt = self.clone()
                     nxt.free_cells[slot] = None
                     nxt.cascades[col] = self.cascades[col] + [card]
@@ -178,6 +200,9 @@ class State:
             # 2b. Top card → free cell (if empty)
             for slot in range(4):
                 if self.free_cells[slot] is None:
+                    # PRUNE: never move King from cascade to free cell
+                    if prune and top_card.rank == 13:
+                        continue
                     nxt = self.clone()
                     nxt.cascades[col] = cascade[:-1]
                     nxt.free_cells[slot] = top_card
@@ -194,6 +219,9 @@ class State:
                 if dest_col == col:
                     continue
                 if self._can_place_on_tableau(top_card, self.cascades[dest_col]):
+                    # PRUNE: never move King to cascade
+                    if prune and top_card.rank == 13:
+                        continue
                     nxt = self.clone()
                     nxt.cascades[col] = cascade[:-1]
                     nxt.cascades[dest_col] = self.cascades[dest_col] + [top_card]
