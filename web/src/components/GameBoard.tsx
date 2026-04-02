@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DragEvent } from 'react'
 import type { GameState, Selection } from '../game/types'
 import {
@@ -9,18 +9,34 @@ import {
   dealInitialState,
   isValidTableauRun,
   isWin,
-  maxSequenceMovable,
   type MoveTarget,
 } from '../game/freecell'
 import { postSolve } from '../api/solveClient'
 import { applyMoveSequence } from '../api/applyMoveSequence'
 import type { SearchMetricsJson, SolverMethod } from '../api/contract'
 import { parseGameStateFromText } from '../game/parseGamesTxt'
+import {
+  buildSolverStepLines,
+  solverMethodLabel,
+} from '../game/formatSolverMoves'
 import { resolveStateText } from '../game/stateFiles'
 import { CardFace } from './CardFace'
 
 const SOLVER_STEP_DELAY_MS = 180
 const CARD_MOVE_ANIM_MS = 220
+
+function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'] as const
+  let v = bytes
+  let i = 0
+  while (v >= 1024 && i < units.length - 1) {
+    v /= 1024
+    i += 1
+  }
+  const digits = i === 0 ? 0 : 1
+  return `${v.toFixed(digits)} ${units[i]}`
+}
 
 function randomSeed(): number {
   return Math.floor(Math.random() * 0x7fffffff)
@@ -45,14 +61,20 @@ export function GameBoard() {
   const [draggingKey, setDraggingKey] = useState<string | null>(null)
   const [solvingMethod, setSolvingMethod] = useState<SolverMethod | null>(null)
   const [solverError, setSolverError] = useState<string | null>(null)
-  const [solverMetrics, setSolverMetrics] = useState<SearchMetricsJson | null>(null)
-  const [stateFileLabel, setStateFileLabel] = useState(() => {
-    const r = resolveStateText()
-    return r?.name ?? ''
-  })
+  const [solverPlan, setSolverPlan] = useState<{
+    method: SolverMethod
+    lines: string[]
+  } | null>(null)
+  const [solverModal, setSolverModal] = useState<{
+    ok: boolean
+    method: SolverMethod
+    metrics: SearchMetricsJson | null
+    error?: string | null
+  } | null>(null)
 
   const won = useMemo(() => isWin(game), [game])
   const isSolving = solvingMethod !== null
+  const isSolverModalOpen = solverModal !== null
 
   const setGameWithAnimation = useCallback(async (next: GameState) => {
     const root = boardRef.current
@@ -98,20 +120,20 @@ export function GameBoard() {
 
   const startNewGame = useCallback(() => {
     const next = stateFromConfig()
-    const r = resolveStateText()
-    setStateFileLabel(r?.name ?? '')
     void setGameWithAnimation(next)
     setInitialDeal(cloneState(next))
     setUndoStack([])
     setSolverError(null)
-    setSolverMetrics(null)
+    setSolverPlan(null)
+    setSolverModal(null)
   }, [setGameWithAnimation])
 
   const restart = useCallback(() => {
     void setGameWithAnimation(cloneState(initialDeal))
     setUndoStack([])
     setSolverError(null)
-    setSolverMetrics(null)
+    setSolverPlan(null)
+    setSolverModal(null)
   }, [initialDeal, setGameWithAnimation])
 
   const undo = useCallback(() => {
@@ -204,19 +226,33 @@ export function GameBoard() {
       if (isSolving) return
       setSolvingMethod(method)
       setSolverError(null)
-      setSolverMetrics(null)
+      setSolverPlan(null)
+      setSolverModal(null)
       const snapshot = cloneState(game)
 
       try {
         const result = await postSolve(method, snapshot)
-        setSolverMetrics(result.metrics ?? null)
 
         if (!result.ok) {
-          setSolverError(result.error ?? 'Solver failed')
+          const metrics = result.metrics ?? null
+          const error = result.error ?? 'Solver failed'
+          setSolverError(error)
+          setSolverPlan(null)
+          setSolverModal({
+            ok: false,
+            method,
+            metrics,
+            error,
+          })
           return
         }
 
+        const okMetrics = result.metrics ?? null
         const moves = result.moves ?? []
+        setSolverPlan({
+          method,
+          lines: buildSolverStepLines(snapshot, moves),
+        })
         // Validate full sequence first, then animate applying each step.
         applyMoveSequence(snapshot, moves)
         pushUndo(snapshot)
@@ -229,8 +265,20 @@ export function GameBoard() {
             window.setTimeout(resolve, SOLVER_STEP_DELAY_MS),
           )
         }
+        setSolverModal({
+          ok: true,
+          method,
+          metrics: okMetrics,
+        })
       } catch (e) {
-        setSolverError(e instanceof Error ? e.message : 'Cannot reach solver API')
+        const error = e instanceof Error ? e.message : 'Cannot reach solver API'
+        setSolverError(error)
+        setSolverModal({
+          ok: false,
+          method,
+          metrics: null,
+          error,
+        })
       } finally {
         setSolvingMethod(null)
       }
@@ -238,12 +286,19 @@ export function GameBoard() {
     [game, isSolving, pushUndo, setGameWithAnimation],
   )
 
+  useEffect(() => {
+    if (!solverModal) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSolverModal(null)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [solverModal])
+
   const canDragCascade = (col: number, fromIndex: number) => {
     const run = game.cascades[col].slice(fromIndex)
     return run.length > 0 && isValidTableauRun(run)
   }
-
-  const maxMove = maxSequenceMovable(game)
 
   return (
     <div
@@ -314,40 +369,17 @@ export function GameBoard() {
         </div>
       ) : null}
 
-      {solverError ? (
+      {solverError && !isSolverModalOpen ? (
         <div className="solver-error" role="alert">
           Solver error: {solverError}
         </div>
       ) : null}
 
-      {won ? (
+      {won && !isSolverModalOpen ? (
         <div className="win-banner" role="status">
           You win — all suits built to King.
         </div>
       ) : null}
-
-      <div className="hud">
-        <span>
-          Max run move: <strong>{maxMove}</strong>
-        </span>
-        {stateFileLabel ? (
-          <span
-            className="muted"
-            title="File trong web/states/ — đổi bằng ?state=a_star hoặc biến VITE_INITIAL_STATE"
-          >
-            State: <strong>{stateFileLabel}</strong>.txt
-          </span>
-        ) : null}
-        {solverMetrics ? (
-          <>
-            <span className="muted">
-              Time: {Math.round(solverMetrics.searchTimeMs)} ms
-            </span>
-            <span className="muted">Nodes: {solverMetrics.expandedNodes}</span>
-            <span className="muted">Moves: {solverMetrics.solutionLength}</span>
-          </>
-        ) : null}
-      </div>
 
       <div className="top-row">
         <div className="freecells">
@@ -450,6 +482,109 @@ export function GameBoard() {
           </div>
         ))}
       </div>
+
+      {solverPlan ? (
+        <section
+          className="solver-steps-panel"
+          aria-label="Các bước thuật toán trả về"
+        >
+          <h2 className="solver-steps-title">
+            Lời giải ({solverMethodLabel(solverPlan.method)})
+            {solverPlan.lines.length > 0 ? (
+              <span className="solver-steps-count">
+                {' '}
+                · {solverPlan.lines.length} bước
+              </span>
+            ) : null}
+          </h2>
+          <div className="solver-steps-body">
+            {solverPlan.lines.length > 0 ? (
+              <ol className="solver-steps-list">
+                {solverPlan.lines.map((line, i) => (
+                  <li key={i}>{line}</li>
+                ))}
+              </ol>
+            ) : (
+              <p className="solver-steps-empty">
+                Trạng thái đã thắng — không cần nước đi.
+              </p>
+            )}
+          </div>
+        </section>
+      ) : null}
+
+      {solverModal ? (
+        <div
+          className="solver-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Solver results"
+          onClick={() => setSolverModal(null)}
+        >
+          <div className="solver-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="solver-modal-header">
+              <h2 className="solver-modal-title">
+                {solverModal.ok ? 'Win!' : 'Solver result'}
+              </h2>
+              <button
+                type="button"
+                className="solver-modal-close"
+                aria-label="Close"
+                onClick={() => setSolverModal(null)}
+              >
+                ×
+              </button>
+            </div>
+
+            <p className="solver-modal-message">
+              {solverModal.ok
+                ? 'Solver đã tìm được lời giải. Chúc mừng!'
+                : solverModal.error ?? 'Solver không tìm được lời giải.'}
+            </p>
+
+            <div className="solver-modal-grid" role="group" aria-label="Metrics">
+              <div className="solver-modal-stat">
+                <span className="solver-modal-stat-label">Time</span>
+                <span className="solver-modal-stat-value">
+                  {solverModal.metrics
+                    ? `${Math.round(solverModal.metrics.searchTimeMs)} ms`
+                    : '—'}
+                </span>
+              </div>
+              <div className="solver-modal-stat">
+                <span className="solver-modal-stat-label">Memory</span>
+                <span className="solver-modal-stat-value">
+                  {solverModal.metrics
+                    ? `${formatBytes(solverModal.metrics.peakMemoryBytes)}`
+                    : '—'}
+                </span>
+              </div>
+              <div className="solver-modal-stat">
+                <span className="solver-modal-stat-label">Expanded Nodes</span>
+                <span className="solver-modal-stat-value">
+                  {solverModal.metrics ? solverModal.metrics.expandedNodes : '—'}
+                </span>
+              </div>
+              <div className="solver-modal-stat">
+                <span className="solver-modal-stat-label">Search Length</span>
+                <span className="solver-modal-stat-value">
+                  {solverModal.metrics ? solverModal.metrics.solutionLength : '—'}
+                </span>
+              </div>
+            </div>
+
+            <div className="solver-modal-actions">
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setSolverModal(null)}
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <footer className="help">
         <p>

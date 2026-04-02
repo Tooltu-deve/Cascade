@@ -8,6 +8,9 @@
   max-width: 1200px;
   margin: 0 auto;
   text-align: left;
+  /* Chừa chỗ cho footer cố định — tránh nội dung bị che */
+  padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
 }
 
 .game-toolbar {
@@ -227,11 +230,15 @@
   opacity: 0.7;
 }
 
+/* Giữ chỗ cho cột cao nhất (~7 lá lúc chia bài) để panel phía dưới không nhảy lên khi cascade trống */
 .cascades {
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 0.35rem;
   align-items: start;
+  min-height: calc(
+    var(--card-h) + 6 * (var(--card-h) - var(--card-overlap))
+  );
 }
 
 .cascade-column {
@@ -324,15 +331,199 @@
   color: #1a1a1e;
 }
 
+.solver-steps-panel {
+  --solver-panel-height: min(38vh, 300px);
+  margin-top: 1.25rem;
+  margin-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+  padding: 1rem 1.1rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.22);
+  box-sizing: border-box;
+  height: var(--solver-panel-height);
+  min-height: var(--solver-panel-height);
+  max-height: var(--solver-panel-height);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.solver-steps-title {
+  margin: 0 0 0.65rem;
+  flex-shrink: 0;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-h);
+  letter-spacing: -0.02em;
+}
+
+.solver-steps-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.2rem;
+}
+
+.solver-steps-count {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  letter-spacing: 0;
+}
+
+.solver-steps-list {
+  margin: 0;
+  padding-left: 1.35rem;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--text-h);
+  font-variant-numeric: tabular-nums;
+}
+
+.solver-steps-list li {
+  margin-bottom: 0.4rem;
+  padding-left: 0.25rem;
+}
+
+.solver-steps-list li::marker {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.solver-steps-empty {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
 .help {
-  margin-top: 1.5rem;
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0;
+  padding: 0.65rem 1rem calc(0.65rem + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
   font-size: 0.85rem;
   color: var(--text-muted);
-  max-width: 52ch;
+  background: linear-gradient(
+    to top,
+    rgba(15, 28, 24, 0.97) 70%,
+    rgba(15, 28, 24, 0.88)
+  );
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(6px);
+  text-align: center;
 }
 
 .help p {
+  margin: 0 auto;
+  max-width: 52ch;
+  text-align: center;
+}
+
+/* ── Solver result modal ─────────────────────────────────────────────── */
+.solver-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.solver-modal {
+  width: min(760px, 100%);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(15, 28, 24, 0.92);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    0 18px 60px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  padding: 1.1rem 1.15rem 1.05rem;
+}
+
+.solver-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.solver-modal-title {
   margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  letter-spacing: -0.03em;
+  color: var(--text-h);
+}
+
+.solver-modal-message {
+  margin: 0.85rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.solver-modal-grid {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.solver-modal-stat {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.12);
+  padding: 0.7rem 0.75rem;
+}
+
+.solver-modal-stat-label {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.solver-modal-stat-value {
+  display: block;
+  font-family: var(--font-body);
+  font-weight: 650;
+  font-size: 1.05rem;
+  color: var(--text-h);
+}
+
+.solver-modal-actions {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.solver-modal-close {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.1rem 0.35rem;
+}
+
+.solver-modal-close:hover {
+  color: var(--text-h);
 }
 
 @media (max-width: 900px) {
