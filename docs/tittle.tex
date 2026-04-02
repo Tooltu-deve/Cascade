@@ -1,0 +1,127 @@
+% Title page file - được include vào main.tex
+
+%Tạo trang bìa
+\begin{titlepage}
+    \enlargethispage{3cm}
+    \begin{tikzpicture}[remember picture, overlay, inner sep=0, outer sep=0]
+    
+        %Khung chính
+        \draw[blue!55!black, line width=5.5pt] 
+            ([xshift=-1.5cm, yshift=-2cm]current page.north east) coordinate (A) --
+            ([xshift=1.5cm, yshift=-2cm]current page.north west) coordinate (B) --
+            ([xshift=1.5cm, yshift=2cm]current page.south west) coordinate (C) --
+            ([xshift=-1.5cm, yshift=2cm]current page.south east) coordinate (D) -- cycle;
+
+        %Viền lồng 1
+        \draw 
+            ([yshift=0.2cm,xshift=-0.3cm]A)-- ([yshift=0.2cm,xshift=0.3cm]B)--
+            ([yshift=-0.3cm,xshift=0.3cm]B) --([yshift=-0.3cm,xshift=-0.2cm]B)--
+            ([yshift=0.3cm,xshift=-0.2cm]C)--([yshift=0.3cm,xshift=0.3cm]C)--
+            ([yshift=-0.2cm,xshift=0.3cm]C)-- ([yshift=-0.2cm,xshift=-0.3cm]D)--
+            ([yshift=0.3cm,xshift=-0.3cm]D)--([yshift=0.3cm,xshift=0.2cm]D)--
+            ([yshift=-0.3cm,xshift=0.2cm]A)--([yshift=-0.3cm,xshift=-0.3cm]A)--
+            ([yshift=0.2cm,xshift=-0.3cm]A);
+
+        %Viền lồng 2
+        \draw 
+            ([yshift=-0.2cm,xshift=0.2cm]A)-- ([yshift=-0.2cm,xshift=-0.2cm]B)--
+            ([yshift=0.2cm,xshift=-0.2cm]B) --([yshift=0.2cm,xshift=0.2cm]B)--
+            ([yshift=-0.2cm,xshift=0.2cm]C)--([yshift=-0.2cm,xshift=-0.2cm]C)--
+            ([yshift=0.2cm,xshift=-0.2cm]C)-- ([yshift=0.2cm,xshift=0.2cm]D)--
+            ([yshift=-0.2cm,xshift=0.2cm]D)--([yshift=-0.2cm,xshift=-0.2cm]D)--
+            ([yshift=0.2cm,xshift=-0.2cm]A)--([yshift=0.2cm,xshift=0.2cm]A)--
+            ([yshift=-0.2cm,xshift=0.2cm]A);
+
+    \end{tikzpicture}
+
+%ND thông tin BTL
+\begin{center} 
+    % University and faculty name
+    {\LARGE\bfseries\color{universityblue} University of Science - VNU-HCM \par}
+    \vspace{0.3cm}
+    {\large Faculty of Information Technology \par}
+    \vspace{1cm}
+    
+    % University logo
+    \includegraphics[width=3.5in, height=3in]{asset/logo-hcmus-new.png}
+    \vspace{1cm}
+    
+    % Double horizontal rule above the title
+    \vspace{0.5cm}
+    \hrule height 1pt
+    \vspace{0.5cm}
+    
+    % Project title
+    {\Huge\bfseries\color{titlecolor} Introduction to Artificial Intelligence\par}
+    \vspace{0.5cm}
+    
+    % Subtitle
+    {\Large Project 01 – FreeCell Solver Using Search Algorithms\par}
+    \vspace{0.5cm}
+    
+    % Double horizontal rule below the title
+    \hrule height 1pt
+    \vspace{1cm}
+%Ngày tháng
+\vspace{6.0cm}
+    \text{HO CHI MINH CITY - 2026}\
+\end{center}
+\end{titlepage}
+
+
+\begin{titlepage}
+    \begin{center}
+        % University and faculty name
+        {\LARGE\bfseries\color{universityblue} University of Science - VNU-HCM \par}
+        \vspace{0.5cm}
+        {\large Faculty of Information Technology \par}
+        \vspace{1.5cm}
+
+        % University logo
+        \includegraphics[width=3.5in, height=3in]{asset/logo-hcmus-new.png}
+        \vspace{1.5cm}
+
+        % Double horizontal rule above the title
+        \hrule height 1pt
+        \vspace{0.5cm}
+
+        % Project title
+        {\Huge\bfseries\color{titlecolor} Introduction to Artificial Intelligence \par}
+        \vspace{0.5cm}
+
+        % Subtitle
+        {\Large Project 01 – FreeCell Solver Using Search Algorithms\par}
+        \vspace{0.5cm}
+
+        % Double horizontal rule below the subtitle
+        \hrule height 1pt
+        \vspace{1.5cm}
+
+        % Instructor information
+        \begin{tabular}{ll}
+            \textbf{INSTRUCTORS:} & Ths. Nguyễn Thanh Tình \\
+            \textbf{TEACHING ASSISTANTS:} & Ths. Nguyễn Hải Đăng \\
+        \end{tabular}
+        \vspace{1cm}
+
+        % Student information table
+        \begin{tabular}{|c|l|c|}
+            \hline
+            \textbf{No.} & \textbf{Full Name} & \textbf{Student ID} \\
+            \hline
+            1 & Trần Phan Gia Hiển & 24127161 \\
+            \hline
+            2 & Lê Văn Tiến & 24127556 \\
+            \hline
+            3 & Nguyễn Tấn Tú & 24127578 \\
+            \hline
+            4 & Trần Minh Thanh & 24127596 \\
+            \hline
+        \end{tabular}
+
+        % Date and location
+         \vspace{0.65cm}
+         \vfill
+        HO CHI MINH CITY - 2026
+    \end{center}
+\end{titlepage}
