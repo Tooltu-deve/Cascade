@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse
 
 from game import State, card_total_count, is_valid_initial_state
 from models import GameState, MoveStep, SearchMetrics, SolveRequest
-from solver import bfs_solve, dfs_solve
+from solver import bfs_solve, dfs_solve, astar_solve
 
 # Start memory tracing at module load so peak captures the whole server startup
 tracemalloc.start()
@@ -135,17 +135,23 @@ def solve_dfs(req: SolveRequest):
         error=result.error if not result.ok else None,
     )
 
+@app.post("/solve/astar")
+def solve_astar(req: SolveRequest):
+    """A* Search solver with critical path heuristic."""
+    state = _parse_state(req)
+    result = astar_solve(state, time_limit=120.0)
+    return _camel_json_response(
+        ok=result.ok,
+        moves=result.moves if result.ok else None,
+        metrics=result.metrics,
+        error=result.error if not result.ok else None,
+    )
+
 
 @app.post("/solve/ucs")
 def solve_ucs(req: SolveRequest):
     """Uniform-Cost Search solver (not yet implemented)."""
     raise HTTPException(status_code=501, detail="UCS solver not yet implemented")
-
-
-@app.post("/solve/astar")
-def solve_astar(req: SolveRequest):
-    """A* Search solver (not yet implemented)."""
-    raise HTTPException(status_code=501, detail="A* solver not yet implemented")
 
 
 # ── entry point ──────────────────────────────────────────────────────────────
