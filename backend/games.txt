@@ -5,12 +5,9 @@
 # Card: s/h/d/c + rank (1=Ace, 2-10, 11=J, 12=Q, 13=K)
 # MUST: total = 52 cards per game
 #
-# Games 1-8: WORKING — solvable <1s with BFS/DFS
-#   - Use for: BFS vs DFS vs UCS vs A* comparison (all 4 should solve)
-# Games 9-16: TIMEOUT — BFS/DFS timeout at 30s
-#   - Use for: UCS vs A* comparison (heuristic search expected to solve)
+# Games 1-8: WORKING - solvable <1s with BFS/DFS
+# Games 9-16: TIMEOUT - use for UCS/A* comparison
 #
-# Test command: python3 parser.py --test [game_num]
 # ============================================================
 
 ## Game 1: Already won (0 moves)
@@ -27,16 +24,16 @@ d1,d2,d3,d4,d5,d6,d7,d8,d9,d10,d11,d12,d13
 c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13
 
 
-## Game 2: 1 direct King (1 move)
-# s13 on cascade top -> spades foundation directly.
+## Game 2: King on cascade top (1 move)
+# s13 on cascade top, spades foundation needs s13 (top=s11, needs s12, s13). Solution: s13->foundation.
 cascades:
-s13,s12
+s13
 
 freecells:
 _,_,_,_
 
 foundations:
-s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11
+s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11,s12
 h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12,h13
 d1,d2,d3,d4,d5,d6,d7,d8,d9,d10,d11,d12,d13
 c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13
@@ -60,7 +57,7 @@ c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13
 
 
 ## Game 4: 4 direct Kings (4 moves)
-# All 4 Kings on cascade tops. Tests parallel foundation moves.
+# All 4 Kings on cascade tops.
 cascades:
 s13
 h13
@@ -77,8 +74,8 @@ d1,d2,d3,d4,d5,d6,d7,d8,d9,d10,d11,d12
 c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12
 
 
-## Game 5: 4 Kings, 4 free cells empty (4 moves)
-# 4 Kings in cascades, 4 empty free cells. Low branching.
+## Game 5: 4 direct Kings (4 moves)
+# Same as G4 — duplicate for test consistency.
 cascades:
 s13
 h13
@@ -95,8 +92,8 @@ d1,d2,d3,d4,d5,d6,d7,d8,d9,d10,d11,d12
 c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12
 
 
-## Game 6: 4 Kings, 0 cascade, 4 free cells (4 moves)
-# 0 cascades, 4 Kings in free cells. Only freecell->foundation moves.
+## Game 6: Empty cascades, free cells have Kings (4 moves)
+# 0 cascades, 4 Kings in free cells.
 cascades:
 
 freecells:
@@ -110,7 +107,7 @@ c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12
 
 
 ## Game 7: Near-win (2 moves)
-# Only 2 Kings left in cascades. Tests close-to-goal efficiency.
+# Only 2 Kings left in cascades.
 cascades:
 s13
 h13
@@ -125,8 +122,8 @@ d1,d2,d3,d4,d5,d6,d7,d8,d9,d10,d11,d12,d13
 c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13
 
 
-## Game 8: 4 Kings in cascades + 4 empty free cells (4 moves)
-# Same as Game 5 — duplicate for consistency across test runs.
+## Game 8: 4 direct Kings (4 moves)
+# Same as G4 — duplicate for test consistency.
 cascades:
 s13
 h13
@@ -144,7 +141,7 @@ c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12
 
 
 ## Game 9: 5 cascade cards (timeout)
-# BFS/DFS timeout at 30s. UCS/A* expected to solve faster.
+# BFS/DFS timeout. Use for UCS/A* comparison.
 cascades:
 s13
 h11,h12
@@ -161,7 +158,7 @@ c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13
 
 
 ## Game 10: 6 cascade cards (timeout)
-# High branching factor. UCS/A* recommended.
+# High branching. UCS/A* recommended.
 cascades:
 s13
 c12,h13
@@ -282,7 +279,7 @@ foundations:
 
 
 ## Game 16: Complex blocking (timeout)
-# 8 cascade cards, all Kings blocked by Queens. Tests blocking-resolution.
+# 8 cascade cards, all Kings blocked by Queens.
 cascades:
 s12,s13
 h12,h13
