@@ -15,6 +15,8 @@ import {
 import { postSolve } from '../api/solveClient'
 import { applyMoveSequence } from '../api/applyMoveSequence'
 import type { SearchMetricsJson, SolverMethod } from '../api/contract'
+import { parseGameStateFromText } from '../game/parseGamesTxt'
+import { resolveStateText } from '../game/stateFiles'
 import { CardFace } from './CardFace'
 
 const SOLVER_STEP_DELAY_MS = 180
@@ -24,9 +26,18 @@ function randomSeed(): number {
   return Math.floor(Math.random() * 0x7fffffff)
 }
 
+function stateFromConfig(): GameState {
+  const resolved = resolveStateText()
+  if (resolved) {
+    const parsed = parseGameStateFromText(resolved.text)
+    if (parsed) return parsed
+  }
+  return dealInitialState(randomSeed())
+}
+
 export function GameBoard() {
   const boardRef = useRef<HTMLDivElement | null>(null)
-  const [game, setGame] = useState<GameState>(() => dealInitialState(randomSeed()))
+  const [game, setGame] = useState<GameState>(() => stateFromConfig())
   const [initialDeal, setInitialDeal] = useState<GameState>(() =>
     cloneState(game),
   )
@@ -35,6 +46,10 @@ export function GameBoard() {
   const [solvingMethod, setSolvingMethod] = useState<SolverMethod | null>(null)
   const [solverError, setSolverError] = useState<string | null>(null)
   const [solverMetrics, setSolverMetrics] = useState<SearchMetricsJson | null>(null)
+  const [stateFileLabel, setStateFileLabel] = useState(() => {
+    const r = resolveStateText()
+    return r?.name ?? ''
+  })
 
   const won = useMemo(() => isWin(game), [game])
   const isSolving = solvingMethod !== null
@@ -82,7 +97,9 @@ export function GameBoard() {
   }, [])
 
   const startNewGame = useCallback(() => {
-    const next = dealInitialState(randomSeed())
+    const next = stateFromConfig()
+    const r = resolveStateText()
+    setStateFileLabel(r?.name ?? '')
     void setGameWithAnimation(next)
     setInitialDeal(cloneState(next))
     setUndoStack([])
@@ -313,6 +330,14 @@ export function GameBoard() {
         <span>
           Max run move: <strong>{maxMove}</strong>
         </span>
+        {stateFileLabel ? (
+          <span
+            className="muted"
+            title="File trong web/states/ — đổi bằng ?state=a_star hoặc biến VITE_INITIAL_STATE"
+          >
+            State: <strong>{stateFileLabel}</strong>.txt
+          </span>
+        ) : null}
         {solverMetrics ? (
           <>
             <span className="muted">
