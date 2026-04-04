@@ -4,12 +4,11 @@ A* Search solver for FreeCell.
 Uses:
   - g(n): move-type-based cost function
   - h(n): critical path heuristic
-  - f(n) = g(n) + ε * h(n)  (Weighted A* with ε ≥ 1)
+  - f(n) = g(n) + h(n)  (Standard A*)
 
 Advanced optimizations:
   1. Safe Move Pruning: Auto-play safe foundation moves
-  2. Weighted A*: f(n) = g(n) + ε * h(n) for faster search
-  3. Symmetry Breaking: Canonical state keys (sorted freecells/cascades)
+  2. Symmetry Breaking: Canonical state keys (sorted freecells/cascades)
 """
 
 from __future__ import annotations
@@ -24,10 +23,8 @@ from game import State, _is_red
 from models import Card, MoveStep, MoveTarget, SearchMetrics, Selection
 
 
-# Standard A* parameter: ε = 1 ensures optimal solution
-# f(n) = g(n) + 1.0 * h(n)
+# Standard A* search: f(n) = g(n) + h(n)
 # This guarantees the shortest path will be found
-EPSILON = 1.0
 
 
 @dataclass
@@ -307,7 +304,7 @@ def solve(state: State, time_limit: float = 120.0) -> AStarResult:
     """
     Standard A* Search from the given state with advanced optimizations.
     
-    Uses A*: f(n) = g(n) + h(n) with ε = 1.0
+    Uses A*: f(n) = g(n) + h(n)
     
     This guarantees the SHORTEST PATH will be found (optimal solution).
     
@@ -349,7 +346,7 @@ def solve(state: State, time_limit: float = 120.0) -> AStarResult:
     counter = 0
     
     h_start = _estimate_heuristic(state)
-    f_start = 0.0 + EPSILON * h_start  # g(start) = 0, f = g + h (standard A*)
+    f_start = 0.0 + h_start  # g(start) = 0, f = g + h (standard A*)
     heapq.heappush(pq, (f_start, 0.0, counter, state, initial_path))
     counter += 1
 
@@ -416,8 +413,8 @@ def solve(state: State, time_limit: float = 120.0) -> AStarResult:
             # Compute h(next) = heuristic estimate
             new_h = _estimate_heuristic(safe_state)
             
-            # Compute f(next) = g(next) + ε * h(next) (Weighted A*)
-            new_f = new_g + EPSILON * new_h
+            # Compute f(next) = g(next) + h(next) (Standard A*)
+            new_f = new_g + new_h
             
             # Use canonical key for symmetry breaking
             next_key = _canonical_state_key(safe_state)

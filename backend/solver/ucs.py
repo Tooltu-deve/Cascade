@@ -1,17 +1,3 @@
-"""
-Uniform Cost Search (UCS) solver for FreeCell.
-
-Uses move-type-based cost function:
-  - Foundation: 0.5 (encouraged)
-  - Cascade: 1.0 (normal)
-  - FreeCell: 1.8 (discouraged)
-
-Optimizations applied (pure UCS - no heuristic):
-  1. Safe Move Pruning: Auto-play safe foundation moves (Ace, 2, and cards
-     where opposite-color (n-1) are already in foundation)
-  2. Symmetry Breaking: Canonical state keys (sorted freecells/cascades)
-"""
-
 from __future__ import annotations
 
 import gc
